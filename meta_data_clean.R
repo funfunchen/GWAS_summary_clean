@@ -53,7 +53,7 @@ Set_one <- whole.form %>% filter(Otg %in% c("AG","GA","CT","TC")) %>%
 #### if there are effect_allele frequency in original data
 #############
 
-# Set_two <- whole.form %>% filter(Otg %in% c("AT","TA","GC","CG")) %>% filter(abs(Freq-0.5)>0.1) %>% mutate(Flip=flip(REF1,ALT1)) %>% 
+# Set_two <- whole.form %>% filter(Otg %in% c("AT","TA","GC","CG")) %>% filter(abs(Freq-0.5)>=0.1) %>% mutate(Flip=flip(REF1,ALT1)) %>% 
 #   mutate(Diff=ifelse(abs(Freq-AF)>abs(Freq+AF-1),"B","S")) %>% filter(!is.na(Diff)) %>% 
 #   mutate(BETA=ifelse(((Samp==Otg & Diff=="S")|(Samp==Flip & Diff=="S")),Beta,ifelse((Samp==Flip & Diff=="B")|(Samp==Otg & Diff=="B"), -1*Beta, NA))) %>% 
 #   select(CHROM,POS,SNP=rsID,REF=REF1,ALT=ALT1,Alt_Freq=AF,Beta=BETA,N,SE,pvalue=P)
