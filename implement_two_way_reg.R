@@ -1,35 +1,30 @@
-beta_xy
-beta_xx
-
-beta_yx
-beta_yy
-
-z_trans <- function(x, y){
-  rho<- cor(x, y, method = "spearman");
-  z <- 0.5 * (log(1+rho) - log(1-rho));
-}
-
-z_x_h <- z_trans(beta_xx, beta_xy)
-z_y_h <- z_trans(beta_yy, beta_yx)
-
-lh_M <- function(x_hat, x, n_x, y_hat, y, n_y){
-   dnorm(x_hat, x, sqrt(1/(length(n_x)-3)))*dnorm(y_hat, y, sqrt(1/(length(n_y)-3)))
-};
-lh_M1 <- lh_M(z_x_h, z_x_h, x, z_y_h, 0, y)
-lh_M2 <- lh_M(z_x_h, 0, x, z_y_h, z_y_h, y)
-lh_M3 <- lh_M(z_x_h, 0, x, z_y_h, 0, y)
-
-lh_fun_M4 <- function(z){
-  -1*dnorm(z_x_h, z, sqrt(1/(length(x)-3)))*dnorm(z_y_h, z, sqrt(1/(length(y)-3)))
-};
-test <- nlminb(0.1, lh_fun_M4, gradient = NULL);
-lh_M4 <- -1*lh_fun_M4(test$par)
-
-AIC_score_M1 <- 2-2*log(lh_M1)
-AIC_score_M2 <- 2-2*log(lh_M2)
-AIC_score_M3 <- 2-2*log(lh_M3)
-AIC_score_M4 <- 2-2*log(lh_M4)
-r <- exp((min(AIC_score_M1,AIC_score_M2)-min(AIC_score_M3,AIC_score_M4))/2)
+# 
+# z_trans <- function(x, y){
+#   rho<- cor(x, y, method = "spearman");
+#   z <- 0.5 * (log(1+rho) - log(1-rho));
+# }
+# 
+# z_x_h <- z_trans(beta_xx, beta_xy)
+# z_y_h <- z_trans(beta_yy, beta_yx)
+# 
+# lh_M <- function(x_hat, x, n_x, y_hat, y, n_y){
+#    dnorm(x_hat, x, sqrt(1/(length(n_x)-3)))*dnorm(y_hat, y, sqrt(1/(length(n_y)-3)))
+# };
+# lh_M1 <- lh_M(z_x_h, z_x_h, x, z_y_h, 0, y)
+# lh_M2 <- lh_M(z_x_h, 0, x, z_y_h, z_y_h, y)
+# lh_M3 <- lh_M(z_x_h, 0, x, z_y_h, 0, y)
+# 
+# lh_fun_M4 <- function(z){
+#   -1*dnorm(z_x_h, z, sqrt(1/(length(x)-3)))*dnorm(z_y_h, z, sqrt(1/(length(y)-3)))
+# };
+# test <- nlminb(0.1, lh_fun_M4, gradient = NULL);
+# lh_M4 <- -1*lh_fun_M4(test$par)
+# 
+# AIC_score_M1 <- 2-2*log(lh_M1)
+# AIC_score_M2 <- 2-2*log(lh_M2)
+# AIC_score_M3 <- 2-2*log(lh_M3)
+# AIC_score_M4 <- 2-2*log(lh_M4)
+# r <- exp((min(AIC_score_M1,AIC_score_M2)-min(AIC_score_M3,AIC_score_M4))/2)
 
 # test --------------------------------------------------------------------
 
@@ -37,23 +32,23 @@ r <- exp((min(AIC_score_M1,AIC_score_M2)-min(AIC_score_M3,AIC_score_M4))/2)
 # /net/twins/home/fangchen/LD-hub/cleaned_data/EduYears_Main.clean
 # /net/twins/home/fangchen/TEST/si.result.sig_May_12
 # /net/twins/home/fangchen/LD-hub/cleaned_data/body_fat_percentage_GWAS.clean
+# 
+# edu.file <- read_tsv("/net/twins/home/fangchen/LD-hub/cleaned_data/EduYears_Main.clean")
+# si.cut <- read_tsv("/net/twins/home/fangchen/TEST/si.cut") %>% arrange(CHROM, POS)
+# si_sig <- read_tsv("/net/twins/home/fangchen/TEST/si.result.sig_May_12")
+# edu.set <- filter(edu.file, pvalue<=5*10^(-8)) %>% left_join(si.cut,  by=c("CHROM"="CHROM", "POS"="POS"), copy=F) %>% 
+#   select(CHROM, POS, SNP, Y_edu_beta=Beta, Y_edu_p=pvalue, Y_si_beta=BETA, Y_si_p=PVALUE) %>% na.omit
+# si.set <- left_join(si_sig, edu.file, by=c("CHROM"="CHROM", "POS"="POS"), copy=F) %>% 
+#   select(CHROM, POS, SNP, X_si_beta=BETA, X_si_p=PVALUE, X_edu_beta=Beta, X_edu_p=pvalue) %>% na.omit
+# edu.set <- windowshift(edu.set, 1000000, "Y_edu_p")
+# si.set <- windowshift(si.set, 1000000, "X_si_p")
+# z_x_h <- z_trans(si.set$X_si_beta, si.set$X_edu_beta)
+# z_y_h <- z_trans(edu.set$Y_edu_beta, edu.set$Y_si_beta)
+# x <- si.set$X_si_beta
+# y <- edu.set$Y_edu_beta
 
-edu.file <- read_tsv("/net/twins/home/fangchen/LD-hub/cleaned_data/EduYears_Main.clean")
-si.cut <- read_tsv("/net/twins/home/fangchen/TEST/si.cut") %>% arrange(CHROM, POS)
-si_sig <- read_tsv("/net/twins/home/fangchen/TEST/si.result.sig_May_12")
-edu.set <- filter(edu.file, pvalue<=5*10^(-8)) %>% left_join(si.cut,  by=c("CHROM"="CHROM", "POS"="POS"), copy=F) %>% 
-  select(CHROM, POS, SNP, Y_edu_beta=Beta, Y_edu_p=pvalue, Y_si_beta=BETA, Y_si_p=PVALUE) %>% na.omit
-si.set <- left_join(si_sig, edu.file, by=c("CHROM"="CHROM", "POS"="POS"), copy=F) %>% 
-  select(CHROM, POS, SNP, X_si_beta=BETA, X_si_p=PVALUE, X_edu_beta=Beta, X_edu_p=pvalue) %>% na.omit
-edu.set <- windowshift(edu.set, 1000000, "Y_edu_p")
-si.set <- windowshift(si.set, 1000000, "X_si_p")
-z_x_h <- z_trans(si.set$X_si_beta, si.set$X_edu_beta)
-z_y_h <- z_trans(edu.set$Y_edu_beta, edu.set$Y_si_beta)
-x <- si.set$X_si_beta
-y <- edu.set$Y_edu_beta
 
-
-
+#######################################################
 # screeen test in the folder  ---------------------------------------------
 
 windowshift <- function(file, window.size, pvalue){
@@ -115,24 +110,24 @@ lh_M <- function(x_hat, x, n_x, y_hat, y, n_y){
 };
 
 
-yu.files <- list.files("/net/twins/home/fangchen/TEST",pattern="cut$",full.names=T, recursive= F);
-my.files <- list.files("/net/twins/home/fangchen/LD-hub/cleaned_data/",pattern="clean$",full.names=T, recursive= F); 
+yu.files <- list.files("/net/twins/home/fangchen/TEST",pattern="cut$",full.names=T, recursive= F); # the GWAS results of s/d 
+my.files <- list.files("/net/twins/home/fangchen/LD-hub/cleaned_data/",pattern="clean$",full.names=T, recursive= F); # summaries data
 for (yu in yu.files){
-  trait.name <- strsplit(basename(yu), "[.]")[[1]][1];
+  trait.name <- strsplit(basename(yu), "[.]")[[1]][1]; # get the traits name
   yu.file <- read_tsv(yu);
-  yu.sig.file <- paste0(trait.name, ".result.sig_May_12");
+  yu.sig.file <- paste0("/net/twins/home/fangchen/TEST", trait.name, ".result.sig_May_12"); # already have the files which all SNP are significant 
   yu.sig <- read_tsv(yu.sig.file);
   mylist <- list();
   for (file in my.files){
     name <- basename(file);
     my.data <- read_tsv(file);
     X.set <- left_join(yu.sig, my.data, by=c("CHROM"="CHROM", "POS"="POS"), copy=F) %>% 
-      select(CHROM, POS, SNP, X_x_beta=BETA, X_x_p=PVALUE, X_y_beta=Beta, X_y_p=pvalue) %>% na.omit;
+      select(CHROM, POS, SNP, X_x_beta=BETA, X_x_p=PVALUE, X_y_beta=Beta, X_y_p=pvalue) %>% na.omit; # the Trait X set(without info of Y)  
     Y.set <- filter(my.data, pvalue<=5*10^(-8)) %>% left_join(yu.file,  by=c("CHROM"="CHROM", "POS"="POS"), copy=F) %>% 
-      select(CHROM, POS, SNP, Y_y_beta=Beta, Y_y_p=pvalue, Y_x_beta=BETA, Y_x_p=PVALUE) %>% na.omit;
-    X.set <- windowshift(X.set, 1000000, "X_x_p");
-    Y.set <- windowshift(Y.set, 1000000, "Y_y_p");
-    beta.xx <- X.set$X_x_beta; beta.xy <- X.set$X_y_beta;
+      select(CHROM, POS, SNP, Y_y_beta=Beta, Y_y_p=pvalue, Y_x_beta=BETA, Y_x_p=PVALUE) %>% na.omit; # the Trait Y set (without info of X) 
+    X.set <- windowshift(X.set, 1000000, "X_x_p");  # the effect sizes on Trait X (without info of Y) 
+    Y.set <- windowshift(Y.set, 1000000, "Y_y_p");  # the effect sizes on Trait Y (without info of X)
+    beta.xx <- X.set$X_x_beta; beta.xy <- X.set$X_y_beta; 
     beta.yy <- Y.set$Y_y_beta; beta.yx <- Y.set$Y_x_beta;
     z_x_h <- z_trans(beta.xx, beta.xy);
     z_y_h <- z_trans(beta.yy, beta.yx);
