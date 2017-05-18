@@ -51,6 +51,8 @@
 #######################################################
 # screeen test in the folder  ---------------------------------------------
 
+library(tidyverse)
+
 windowshift <- function(file, window.size, pvalue){
   # Get the most significant SNP signla in the window.size region
   #
@@ -88,7 +90,7 @@ z_trans <- function(x, y){
   #
   #Result:
   #  z: z hat
-  rho<- cor(x, y, method = "spearman");
+  rho<- cor(x, y, method = "spearman",, use = "pairwise.complete.obs");
   z <- 0.5 * (log(1+rho) - log(1-rho));
 }
 
@@ -115,7 +117,7 @@ my.files <- list.files("/net/twins/home/fangchen/LD-hub/cleaned_data/",pattern="
 for (yu in yu.files){
   trait.name <- strsplit(basename(yu), "[.]")[[1]][1]; # get the traits name
   yu.file <- read_tsv(yu);
-  yu.sig.file <- paste0("/net/twins/home/fangchen/TEST", trait.name, ".result.sig_May_12"); # already have the files which all SNP are significant 
+  yu.sig.file <- paste0("/net/twins/home/fangchen/TEST/", trait.name, ".result.sig_May_12"); # already have the files which all SNP are significant 
   yu.sig <- read_tsv(yu.sig.file);
   mylist <- list();
   for (file in my.files){
@@ -129,6 +131,11 @@ for (yu in yu.files){
     Y.set <- windowshift(Y.set, 1000000, "Y_y_p");  # the effect sizes on Trait Y (without info of X)
     beta.xx <- X.set$X_x_beta; beta.xy <- X.set$X_y_beta; 
     beta.yy <- Y.set$Y_y_beta; beta.yx <- Y.set$Y_x_beta;
+    beta.xx <- na.omit(beta.xx);  beta.yy <- na.omit(beta.yy)
+    if(length(beta.xx)<3||length(beta.yy)<3){
+      result <- list(trait=trait.name, file=name, ratio=NA);
+      mylist <- rbind(mylist, result); 
+    }else {
     z_x_h <- z_trans(beta.xx, beta.xy);
     z_y_h <- z_trans(beta.yy, beta.yx);
     lh_M1 <- lh_M(z_x_h, z_x_h, beta.xx, z_y_h, 0, beta.yy);
@@ -147,6 +154,7 @@ for (yu in yu.files){
     r <- exp((min(AIC_score_M1,AIC_score_M2)-min(AIC_score_M3,AIC_score_M4))/2);
     result <- list(trait=trait.name, file=name, ratio=r);
     mylist <- rbind(mylist, result);  ## append the result
+    } ## end of else
   }
   my_res <- as.data.frame(mylist, row.names = F, stringsAsFactors=F);
   my_res <- as.data.frame(lapply(my_res,unlist));
