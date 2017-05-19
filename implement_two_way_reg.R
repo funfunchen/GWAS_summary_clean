@@ -1,31 +1,3 @@
-# 
-# z_trans <- function(x, y){
-#   rho<- cor(x, y, method = "spearman");
-#   z <- 0.5 * (log(1+rho) - log(1-rho));
-# }
-# 
-# z_x_h <- z_trans(beta_xx, beta_xy)
-# z_y_h <- z_trans(beta_yy, beta_yx)
-# 
-# lh_M <- function(x_hat, x, n_x, y_hat, y, n_y){
-#    dnorm(x_hat, x, sqrt(1/(length(n_x)-3)))*dnorm(y_hat, y, sqrt(1/(length(n_y)-3)))
-# };
-# lh_M1 <- lh_M(z_x_h, z_x_h, x, z_y_h, 0, y)
-# lh_M2 <- lh_M(z_x_h, 0, x, z_y_h, z_y_h, y)
-# lh_M3 <- lh_M(z_x_h, 0, x, z_y_h, 0, y)
-# 
-# lh_fun_M4 <- function(z){
-#   -1*dnorm(z_x_h, z, sqrt(1/(length(x)-3)))*dnorm(z_y_h, z, sqrt(1/(length(y)-3)))
-# };
-# test <- nlminb(0.1, lh_fun_M4, gradient = NULL);
-# lh_M4 <- -1*lh_fun_M4(test$par)
-# 
-# AIC_score_M1 <- 2-2*log(lh_M1)
-# AIC_score_M2 <- 2-2*log(lh_M2)
-# AIC_score_M3 <- 2-2*log(lh_M3)
-# AIC_score_M4 <- 2-2*log(lh_M4)
-# r <- exp((min(AIC_score_M1,AIC_score_M2)-min(AIC_score_M3,AIC_score_M4))/2)
-
 # test --------------------------------------------------------------------
 
 # /net/twins/home/fangchen/TEST/si.cut
@@ -90,7 +62,7 @@ z_trans <- function(x, y){
   #
   #Result:
   #  z: z hat
-  rho<- cor(x, y, method = "spearman",, use = "pairwise.complete.obs");
+  rho<- cor(x, y, method = "spearman", use = "pairwise.complete.obs");
   z <- 0.5 * (log(1+rho) - log(1-rho));
 }
 
@@ -173,6 +145,8 @@ for (yu in yu.files){
 
 # script ------------------------------------------------------------------
 
+#use with find /net/twins/home/fangchen/TEST/ -name "*cut"|xargs -n1 -P5 -I{} Rscript --vanilla 2way.R -t {}
+
 library(tidyverse);
 library(getopt);
 
@@ -213,8 +187,10 @@ z_trans <- function(x, y){
   #
   #Result:
   #  z: z hat
-  rho<- cor(x, y, method = "spearman");
+  rho<- cor(x, y, method = "spearman", use = "pairwise.complete.obs");
   z <- 0.5 * (log(1+rho) - log(1-rho));
+  output<-list(rho=rho, z=z);
+  return(output)
 }
 
 
@@ -241,10 +217,10 @@ A <- getopt(opt.spec); ## use exposure file as an argument with Rscript command 
 
 trait.name <- strsplit(basename(A$trait.file), "[.]")[[1]][1]; # get the traits name
 yu.file <- read_tsv(A$trait.file);
-yu.sig.file <- paste0(trait.name, ".result.sig_May_12"); # already have the files which all SNP are significant 
+yu.sig.file <- paste0("/net/twins/home/fangchen/TEST/", trait.name, ".result.sig_May_12"); # already have the files which all SNP are significant 
 yu.sig <- read_tsv(yu.sig.file);
 
-two_way_regression <- function(file){
+two_way_regression <- function(file, expo.file, expo.sig){
   # Calculate the ratio in each file
   #
   # Args:
@@ -254,9 +230,9 @@ two_way_regression <- function(file){
   #  a list consist of trait name(exposure), file name(outcome) and the r ratio 
   name <- basename(file);
   my.data <- read_tsv(file);
-  X.set <- left_join(yu.sig, my.data, by=c("CHROM"="CHROM", "POS"="POS"), copy=F) %>% 
+  X.set <- left_join(expo.sig, my.data, by=c("CHROM"="CHROM", "POS"="POS"), copy=F) %>% 
     select(CHROM, POS, SNP, X_x_beta=BETA, X_x_p=PVALUE, X_y_beta=Beta, X_y_p=pvalue) %>% na.omit; # the Trait X set(without info of Y)  
-  Y.set <- filter(my.data, pvalue<=5*10^(-8)) %>% left_join(yu.file,  by=c("CHROM"="CHROM", "POS"="POS"), copy=F) %>% 
+  Y.set <- filter(my.data, pvalue<=5*10^(-8)) %>% left_join(expo.file,  by=c("CHROM"="CHROM", "POS"="POS"), copy=F) %>% 
     select(CHROM, POS, SNP, Y_y_beta=Beta, Y_y_p=pvalue, Y_x_beta=BETA, Y_x_p=PVALUE) %>% na.omit; # the Trait Y set (without info of X) 
   X.set <- windowshift(X.set, 1000000, "X_x_p");  # the effect sizes on Trait X (without info of Y) 
   Y.set <- windowshift(Y.set, 1000000, "Y_y_p");  # the effect sizes on Trait Y (without info of X)
@@ -264,31 +240,32 @@ two_way_regression <- function(file){
   beta.yy <- as.numeric(Y.set$Y_y_beta); beta.yx <- as.numeric(Y.set$Y_x_beta);
   beta.xx <- na.omit(beta.xx);  beta.yy <- na.omit(beta.yy)
   if(length(beta.xx)<3||length(beta.yy)<3){
-    result <- list(trait=trait.name, file=name, ratio=NA);
+    result <- list(trait=trait.name, file=name, ratio=NA, rho_x=NA, rho_y=NA);
   }else {
-    z_x_h <- z_trans(beta.xx, beta.xy);
-    z_y_h <- z_trans(beta.yy, beta.yx);
+    z_x_h <- z_trans(beta.xx, beta.xy)$z; x_rho <- z_trans(beta.xx, beta.xy)$rho;
+    z_y_h <- z_trans(beta.yy, beta.yx)$z; y_rho <- z_trans(beta.yy, beta.yx)$rho;
     lh_M1 <- lh_M(z_x_h, z_x_h, beta.xx, z_y_h, 0, beta.yy);
     lh_M2 <- lh_M(z_x_h, 0, beta.xx, z_y_h, z_y_h, beta.yy);
     lh_M3 <- lh_M(z_x_h, 0, beta.xx, z_y_h, 0, beta.yy);
     AIC_score_M1 <- 2-2*log(lh_M1)
     AIC_score_M2 <- 2-2*log(lh_M2)
-    AIC_score_M3 <- 2-2*log(lh_M3)
+    AIC_score_M3 <- 0-2*log(lh_M3)
     ## get the mle of modle 4:
-    lh_fun_M4 <- function(z){
-      -1*dnorm(z_x_h, z, sqrt(1/(length(beta.xx)-3)))*dnorm(z_y_h, z, sqrt(1/(length(beta.yy)-3)))
+    lh_fun_M4 <- function(z, x_h, y_h, n_x, n_y){
+      -1*dnorm(x_h, z, sqrt(1/(length(n_x)-3)))*dnorm(y_h, z, sqrt(1/(length(n_y)-3)))
     };
-    test <- nlminb(0.1, lh_fun_M4, gradient = NULL);
-    lh_M4 <- -1*lh_fun_M4(test$par);
+    z_m4 <- nlminb(0.1, lh_fun_M4, x_h=z_x_h, y_h=z_y_h, n_x=beta.xx, n_y=beta.yy, gradient = NULL)$par;
+    lh_M4 <- lh_M(z_x_h, z_m4, beta.xx, z_y_h, z_m4, beta.yy);
     AIC_score_M4 <- 2-2*log(lh_M4);
     r <- exp((min(AIC_score_M1,AIC_score_M2)-min(AIC_score_M3,AIC_score_M4))/2);
-    result <- list(trait=trait.name, file=name, ratio=r);
+    result <- list(trait=trait.name, file=name, ratio=r, rho_x=x_rho, rho_y=y_rho);
   }
 }
 
 my.files <- list.files("/net/twins/home/fangchen/LD-hub/cleaned_data/",pattern="clean$",full.names=T, recursive= F);
-my_res <- rbind.fill(sapply(my.files, two_way_regression))
+my_res <- do.call(rbind, lapply(my.files, two_way_regression, expo.file=yu.file, expo.sig=yu.sig));
+my_res <- as.data.frame(my_res);
 my_res$file <- gsub(".clean$", "", my_res$file);
 my_res_sig <- my_res[which(as.numeric(my_res$r)<0.01),]
-write.table(my_res, paste0(trait.name,".2way.full"), quote=F, row.names=F, sep="\t")
-write.table(my_res_sig, paste0(trait.name,".2way.sig"), quote=F, row.names=F, sep="\t")
+write.table(format(my_res), paste0(trait.name,".2way_may23_rho.full"), quote=F, row.names=F, sep="\t")
+write.table(format(my_res_sig), paste0(trait.name,".2way_may23_rho.sig"), quote=F, row.names=F, sep="\t")
