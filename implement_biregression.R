@@ -82,5 +82,5 @@ windowshift <- function(file, window.size, pvalue){
   my_res <- as.data.frame(my_res);
   my_res$file <- gsub(".clean$", "", my_res$file);
   my_res_sig <- my_res[which(as.numeric(unlist(my_res$expo_p))<0.01),]
-  write.table(format(my_res), paste0(trait.name,".biway_may24.full"), quote=F, row.names=F, sep="\t")
-  write.table(format(my_res_sig), paste0(trait.name,".biway_may24.sig"), quote=F, row.names=F, sep="\t")
+  write.table(format(my_res, digits = 3), paste0(trait.name,".biway_may24.full"), quote=F, row.names=F, sep="\t")
+  write.table(format(my_res_sig, digits = 3), paste0(trait.name,".biway_may24.sig"), quote=F, row.names=F, sep="\t")
