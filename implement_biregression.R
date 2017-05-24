@@ -67,7 +67,7 @@ windowshift <- function(file, window.size, pvalue){
     if(length(beta.xx)<10||length(beta.yy)<10){
       result <- list(trait=trait.name, file=name, expo_beta=NA, expo_p=0, out_beta=NA, out_p=NA, t=NA, t_p=NA, df=NA);
     }else {
-      x <- lm(beta.xy ~ beta.xx); y <- lm(beta.yx ~ beta.yy);
+      x <- lm(beta.xy ~ beta.xx); y <- lm(beta.yy ~ beta.yx);
       beta_x <- summary(x)$coefficients[2,1]; se_x <- summary(x)$coefficients[2,2]; p_x <- summary(x)$coefficients[2,4]
       beta_y <- summary(y)$coefficients[2,1]; se_y <- summary(y)$coefficients[2,2]; p_y <- summary(y)$coefficients[2,4]
       df <- (se_x^2/n_x + se_y^2/n_y)^2/((se_x^2/n_x)^2/(n_x - 1) + (se_y^2/n_y)^2/(n_y - 1));
@@ -79,7 +79,7 @@ windowshift <- function(file, window.size, pvalue){
   
   my.files <- list.files("/net/twins/home/fangchen/LD-hub/cleaned_data/",pattern="clean$",full.names=T, recursive= F);
   my_res <- do.call(rbind, lapply(my.files, bi_regression, expo.file=yu.file, expo.sig=yu.sig));
-  my_res <- as.data.frame(my_res);
+  my_res <- na.omit(as.data.frame(my_res));
   my_res$file <- gsub(".clean$", "", my_res$file);
   my_res_sig <- my_res[which(as.numeric(unlist(my_res$expo_p))<0.01),]
   write.table(format(my_res, digits = 3), paste0(trait.name,".biway_may24.full"), quote=F, row.names=F, sep="\t")
